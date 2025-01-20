@@ -36,7 +36,7 @@ function playBackgroundSong() {
 
 function stopBackgroundSong() {
     backgroundSong.pause();
-    backgroundSong.currentTime() = 0.0;
+    backgroundSong.currentTime = 0.0;
 }
 
 /**
@@ -146,10 +146,9 @@ function checkPose(prediction, video) {
                 }
                 break;
             case '3':
-                if ((time >= 3.0 && time <= 6.5 && !poseState.triggered) ||
-                    if (time <= 13.0) {
-                        triggerExplosion(poseState);
-                    }
+                if (time >= 3.0 && time <= 6.5 && !poseState.triggered) {
+                    triggerExplosion(poseState);
+                }
                 break;
             case '4':
                 if (time >= 6.0 && time <= 7.5 && !poseState.triggered) {
@@ -216,7 +215,7 @@ async function playInstructionVideo() {
         if (!video.paused && !video.ended) {
             try {
                 const { pose, posenetOutput } = await model.estimatePose(video);
-                videoCtx.clepredictionect(0, 0, videoCanvas.width, videoCanvas.height);
+                videoCtx.clearRect(0, 0, videoCanvas.width, videoCanvas.height);
 
                 if (pose) {
                     tmPose.drawKeypoints(pose.keypoints, 0.6, videoCtx);
@@ -252,7 +251,7 @@ function stopWebcam() {
         webcam.stop();
         const canvas = document.getElementById("canvas");
         const ctx = canvas.getContext("2d");
-        ctx.clepredictionect(0, 0, canvas.width, canvas.height);
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
         stopBackgroundSong();
        	const video = document.getElementById('instructionVideo');
     	video.volume = 1.0;
