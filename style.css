@@ -1,260 +1,106 @@
 
-/**
- * Pose Detection Application
- * Using TensorFlow.js and Teachable Machine
- * Created: January 2024
- */
-
-// Model URL from Teachable Machine
-//**************************************************
-//* as before, paste your lnk below
-let URL = "https://teachablemachine.withgoogle.com/models/i0X6YntJi/";
-
-
-
-
-let model, webcam, ctx, labelContainer, maxPredictions;
-
-// Dynamic pose tracking
-let poseStates = {};
-let explosionActive = false;
-let explosionSound = new Audio('explsn.mp3');
-let backgroundSong = new Audio('backgroundSong.mp3');
-
-function setModelURL(url) {
-    URL = url;
-    // Reset states when URL changes
-    poseStates = {};
-    explosionActive = false;
+html, body {
+  height: 100%;
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  font-family: Arial, sans-serif;
 }
 
-function playBackgroundSong() {
-    backgroundSong.volume = 0.3;
-    backgroundSong.play(); 
-    backgroundSong.loop = true;
+.container {
+  max-width: 1920px;
+  margin: 5px;
+  text-align: left;
 }
 
-function stopBackgroundSong() {
-    backgroundSong.pause();
-    backgroundSong.currentTime() = 0.0;
+.webcam-wrapper {
+    height: 850px;
+    
 }
 
-/**
- * Initialize the application
- */
-async function init() {
-    const modelURL = URL + "model.json";
-    const metadataURL = URL + "metadata.json";
-
-    const video = document.getElementById('instructionVideo');
-    video.volume = 0.0;
-
-    try {
-        model = await tmPose.load(modelURL, metadataURL);
-        maxPredictions = model.getTotalClasses();
-
-        const width = 600;
-        const height = 600;
-        const flip = true;
-        webcam = new tmPose.Webcam(width, height, flip);
-        await webcam.setup();
-        await webcam.play();
-        window.requestAnimationFrame(loop);
-
-        const canvas = document.getElementById("canvas");
-        ctx = canvas.getContext("2d");
-        labelContainer = document.getElementById("label-container");
-        for (let i = 0; i < maxPredictions; i++) {
-            labelContainer.appendChild(document.createElement("div"));
-        }
-    } catch (error) {
-        console.error("Error initializing model:", error);
-    }
-	playBackgroundSong()
+.video-container {
+  display: flex;
+  gap: 20px;
+  margin: 10px 0;
 }
 
-async function loop(timestamp) {
-    webcam.update();
-    await predict();
-    window.requestAnimationFrame(loop);
+.video-container > div, 
+.video-container > video {}
+
+.button-container {
+  display: flex;
+  gap: 20px;
+  margin: 10px 0 20px;
 }
 
-function playExplosionSound() {
-    const newSound = new Audio('explsn.mp3');
-    newSound.volume = 1.0;
-    newSound.play();
+.button-pair {
+  display: flex;
+  gap: 10px;
+  flex: 1;
 }
 
-async function predict() {
-    try {
-        const { pose, posenetOutput } = await model.estimatePose(webcam.canvas);
-        const prediction = await model.predict(posenetOutput);
-        const video = document.getElementById('instructionVideo');
-        function poseSort(a, b) {
-          if (a.className < b.className){
-            return -1;
-          }
-          if (a.className > b.className){
-            return 1;
-          }
-          return 0;
-        }
-        prediction.sort(poseSort);
-        for (let i = 0; i < maxPredictions; i++) {
-            const classPrediction =
-                prediction[i].className + ": " + prediction[i].probability.toFixed(2);
-            labelContainer.childNodes[i].innerHTML = classPrediction;
-
-            // Check pose dynamically
-            checkPose(prediction[i], video);
-        }
-
-        drawPose(pose, explosionActive);
-    } catch (error) {
-        console.error("Error in predict:", error);
-    }
+.button-pair button {
+  flex: 1;
+  margin: 0;
 }
 
-function checkPose(prediction, video) {
-    const time = video.currentTime;
-    const prob = prediction.probability;
-
-    // Only respond to pose1 through pose5 labels
-    const poseNumber = prediction.className.toLowerCase().replace(/[^0-9]/g, '');
-    const isPoseLabel = prediction.className.toLowerCase().includes('pose') && poseNumber >= 1 && poseNumber <= 5;
-
-    if (!isPoseLabel) return;
-
-    if (!poseStates[`pose${poseNumber}`]) {
-        poseStates[`pose${poseNumber}`] = {
-            triggered: false,
-        };
-    }
-
-    if (prob > 0.8 && !explosionActive) {
-        const poseState = poseStates[`pose${poseNumber}`];
-
-        switch(poseNumber) {
-            case '1':
-                if (time <= 2.5 && !poseState.triggered) {
-                    triggerExplosion(poseState);
-                }
-                break;
-            case '2':
-                if (time >= 2.0 && time <= 4.5 && !poseState.triggered) {
-                    triggerExplosion(poseState);
-                }
-                break;
-            case '3':
-                if ((time >= 3.0 && time <= 6.5 && !poseState.triggered) ||
-                    if (time <= 13.0) {
-                        triggerExplosion(poseState);
-                    }
-                break;
-            case '4':
-                if (time >= 6.0 && time <= 7.5 && !poseState.triggered) {
-                    triggerExplosion(poseState);
-                }
-                break;
-            case '5':
-                if (time >= 9.5 && !poseState.triggered) {
-                    triggerExplosion(poseState);
-                }
-                break;
-        }
-    }
+.video-wrapper {
+    left: 20%;
+    background-color: #CCCCCC;
+    border: 1px solid #CCCCCC;
 }
 
-function triggerExplosion(poseState) {
-    explosionActive = true;
-    poseState.triggered = true;
-    playExplosionSound();
-    setTimeout(() => { explosionActive = false; }, 300);
+#instructionVideo {
+  position: relative;
+  top: 1px;
+  width: 600px;
+  height: 450px;
+  object-fit: cover;
 }
 
-function drawPose(pose, explode) {
-    if (webcam.canvas) {
-        ctx.drawImage(webcam.canvas, 0, 0);
-        if (pose) {
-            const minPartConfidence = 0.5;
-            if (explode) {
-                pose.keypoints.forEach(keypoint => {
-                    if (keypoint.score > minPartConfidence) {
-                        const scale = 3;
-                        ctx.beginPath();
-                        ctx.arc(keypoint.position.x, keypoint.position.y, 10 * scale, 0, 2 * Math.PI);
-                        ctx.fillStyle = '#FF0000';
-                        ctx.fill();
-                    }
-                });
-            } else {
-                tmPose.drawKeypoints(pose.keypoints, minPartConfidence, ctx);
-                tmPose.drawSkeleton(pose.keypoints, minPartConfidence, ctx);
-            }
-        }
-    }
+#videoTime {
+  text-align: center;
+  margin-top: 35px;
+  padding: 8px;
+  font-size: 32px;
+  font-weight: bold;
 }
 
-async function playInstructionVideo() {
-    const video = document.getElementById('instructionVideo');
-    const videoSrc = video.getAttribute('data-video-src') || 'vid.mp4';
-    video.src = videoSrc;
-    const videoContainer = video.parentElement;
-
-    video.addEventListener('timeupdate', () => {
-        const minutes = Math.floor(video.currentTime / 60);
-        const seconds = Math.floor(video.currentTime % 60);
-        document.getElementById('videoTime').textContent = 
-            `Time: ${minutes}:${seconds.toString().padStart(2, '0')}`;
-    });
-    const videoCanvas = document.getElementById('poseCanvas')
-    const videoCtx = videoCanvas.getContext('2d');
-
-    video.play();
-
-    async function processFrame() {
-        if (!video.paused && !video.ended) {
-            try {
-                const { pose, posenetOutput } = await model.estimatePose(video);
-                videoCtx.clepredictionect(0, 0, videoCanvas.width, videoCanvas.height);
-
-                if (pose) {
-                    tmPose.drawKeypoints(pose.keypoints, 0.6, videoCtx);
-                    tmPose.drawSkeleton(pose.keypoints, 0.6, videoCtx);
-                }
-            } catch (error) {
-                console.error('Pose detection error:', error);
-            }
-            requestAnimationFrame(processFrame);
-        }
-    }
-
-    if (model) {
-        processFrame();
-    } else {
-        console.log("https://teachablemachine.withgoogle.com/models/CMBhs4EAW/");
-    }
+#poseCanvas {
+  pointer-events: none;
+  z-index: 10;
 }
 
-function stopInstructionVideo() {
-    const video = document.getElementById('instructionVideo');
-    video.pause();
-    video.currentTime = 0;
-    pose1Triggered = false;
-    pose2Triggered = false;
-    pose3Triggered = false;
-    pose4Triggered = false;
-    pose5Triggered = false;
+button {
+  padding: 10px 20px;
+  font-size: 16px;
+  margin: 10px 0;
+  cursor: pointer;
+  background: #4CAF50;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  display: block;
 }
 
-function stopWebcam() {
-    if (webcam) {
-        webcam.stop();
-        const canvas = document.getElementById("canvas");
-        const ctx = canvas.getContext("2d");
-        ctx.clepredictionect(0, 0, canvas.width, canvas.height);
-        stopBackgroundSong();
-       	const video = document.getElementById('instructionVideo');
-    	video.volume = 1.0;
-    }
+canvas {
+  /* border: 1px solid #ccc; */
+  width: 600px;
+  height: 600;
+  display: block;
+  object-fit: contain;
+}
+
+#label-container {
+  position: absolute;
+  left: 440px;
+  top: 670px;
+  font-size: 32px;
+  font-weight: bold;
+  line-height: 1.15;
+}
+
+#label-container div {
+  width:200px;
+  margin: 10px 0;
 }
